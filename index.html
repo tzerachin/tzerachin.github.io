@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube Time Tracker</title>
+    <title>サマリー作成</title>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         body {
@@ -31,7 +31,7 @@
             border: none;
         }
         #controls {
-            width: 35%;
+            width: 60%;
             padding: 20px;
             background: white;
             border-radius: 8px;
@@ -67,6 +67,10 @@
             display: flex;
             gap: 5px;
         }
+        #timedisplay{
+            outline: none;
+            border: none;
+        }
         ul {
             list-style: none;
             padding: 0;
@@ -81,7 +85,7 @@
             align-items: center;
         }
         li input {
-            width: 60%;
+            width: 70%;
         }
         .note-buttons {
             display: flex;
@@ -96,10 +100,13 @@
         <div id="player"></div>
     </div>
     <div id="controls">
+        <!--
         <div id="times">
-        <button onclick="getCurrentTime()">カレントタイム取得</button>
+        <button onclick="setCurrenttime()">カレントタイム取得</button>
         <input type="text" id="timedisplay" readonly />
+        <input type="hidden" id="timehidden"/>
         </div>
+        -->
         <input type="text" id="note" placeholder="メモを入力">
         <button onclick="saveNote()">メモを保存</button>
         <button onclick="exportCSV()">CSV出力</button>
@@ -134,7 +141,6 @@
         
         function onPlayerReady(event) {
             playerReady = true;
-            resize();
             document.addEventListener('keydown', handleKeyPress);
         }
         
@@ -159,9 +165,13 @@
             const s = Math.floor(seconds % 60).toString().padStart(2, '0');
             return `${h}:${m}:${s}`;
         }
-        
+        function setCurrenttime(){
+            document.getElementById('timehidden').value = player.getCurrentTime();
+            document.getElementById('timedisplay').value = formatTime(player.getCurrentTime());
+        }
         function saveNote() {
             if (!playerReady) return;
+//            const time = document.getElementById('timehidden').value;
             const time = player.getCurrentTime();
             const note = document.getElementById('note').value;
             notes.push({ time, note });
@@ -206,7 +216,7 @@
                 case 'ArrowRight': player.seekTo(player.getCurrentTime() + 5, true); break;
                 case 'u': player.seekTo(player.getCurrentTime() - 1, true); break;
                 case 'i': player.seekTo(player.getCurrentTime() + 1, true); break;
-                case 'c': player.getCurrentTime(); break;
+//                case 'c': setCurrenttime(); break;
                 case 'Spacebar': console.log('データ送信 (AjaxはDjangoと接続後に実装)'); break;
             }
         }
