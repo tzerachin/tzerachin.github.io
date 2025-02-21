@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Time Tracker</title>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: flex-start;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+        }
+        #video-container {
+/*            width: 60%;
+            padding: 10px;
+*/
+            width: 100%;
+            max-width: 1280px;
+            aspect-ratio: 16 / 9;
+            background: white;
+            border-radius: 8px;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #controls {
+            width: 35%;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-left: 20px;
+        }
+        input, button {
+            width: 90%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #notes-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background: #ffffff;
+        }
+        #times{
+            display: flex;
+            gap: 5px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        li input {
+            width: 60%;
+        }
+        .note-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="video-container">
+        <input type="text" id="video-url" placeholder="YouTube動画URLを入力">
+        <button onclick="loadVideo()">動画を読み込む</button>
+        <div id="player"></div>
+    </div>
+    <div id="controls">
+        <div id="times">
+        <button onclick="getCurrentTime()">カレントタイム取得</button>
+        <input type="text" id="timedisplay" readonly />
+        </div>
+        <input type="text" id="note" placeholder="メモを入力">
+        <button onclick="saveNote()">メモを保存</button>
+        <button onclick="exportCSV()">CSV出力</button>
+        <input type="file" id="csvFileInput" accept=".csv" onchange="importCSV(event)">
+        <div id="notes-container">
+            <ul id="notes-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        let player;
+        let playerReady = false;
+        let inputForcus = false;
+        let notes = [];
+        
+        document.getElementById('note').addEventListener('focus', function () {
+          inputForcus = true
+        });
+        
+        document.getElementById('note').addEventListener('blur', function () {
+          inputForcus = false
+        });
+        
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '360',
+                width: '640',
+                videoId: '',
+                events: { onReady: onPlayerReady }
+            });
+        }
+        
+        function onPlayerReady(event) {
+            playerReady = true;
+            resize();
+            document.addEventListener('keydown', handleKeyPress);
+        }
+        
+        function loadVideo() {
+            if (!playerReady) {
+                alert('プレイヤーの準備が完了するまでお待ちください');
+                return;
+            }
+            const url = document.getElementById('video-url').value;
+            const videoId = extractVideoId(url);
+            if (videoId) player.loadVideoById(videoId);
+        }
+        
+        function extractVideoId(url) {
+            const match = url.match(/[?&]v=([^&]+)/);
+            return match ? match[1] : null;
+        }
+        
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+        
+        function saveNote() {
+            if (!playerReady) return;
+            const time = player.getCurrentTime();
+            const note = document.getElementById('note').value;
+            notes.push({ time, note });
+            notes.sort((a, b) => a.time - b.time);
+            renderNotes();
+        }
+        
+        function renderNotes() {
+            notes.sort((a, b) => a.time - b.time); // 描画前にソート
+            const notesList = document.getElementById('notes-list');
+            notesList.innerHTML = '';
+            notes.forEach(({ time, note }, index) => {
+                const li = document.createElement('li');
+                const timeButton = document.createElement('button');
+                timeButton.textContent = formatTime(time);
+                timeButton.onclick = () => player.seekTo(time, true);
+                const noteInput = document.createElement('input');
+                noteInput.type = 'text';
+                noteInput.value = note;
+                noteInput.onchange = () => notes[index].note = noteInput.value;
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '削除';
+                deleteButton.onclick = () => { notes.splice(index, 1); renderNotes(); };
+                const buttonContainer = document.createElement('div');
+                buttonContainer.classList.add('note-buttons');
+                buttonContainer.appendChild(timeButton);
+                buttonContainer.appendChild(deleteButton);
+                li.appendChild(noteInput);
+                li.appendChild(buttonContainer);
+                notesList.appendChild(li);
+            });
+        }
+        
+        function handleKeyPress(event) {
+            if (!playerReady) return;
+            if(inputForcus) return;
+            switch(event.key) {
+                case 'k': player.getPlayerState() === 1 ? player.pauseVideo() : player.playVideo(); break;
+                case 'j': player.seekTo(player.getCurrentTime() - 10, true); break;
+                case 'l': player.seekTo(player.getCurrentTime() + 10, true); break;
+                case 'ArrowLeft': player.seekTo(player.getCurrentTime() - 5, true); break;
+                case 'ArrowRight': player.seekTo(player.getCurrentTime() + 5, true); break;
+                case 'u': player.seekTo(player.getCurrentTime() - 1, true); break;
+                case 'i': player.seekTo(player.getCurrentTime() + 1, true); break;
+                case 'c': player.getCurrentTime(); break;
+                case 'Spacebar': console.log('データ送信 (AjaxはDjangoと接続後に実装)'); break;
+            }
+        }
+        function exportCSV() {
+            const csvContent = notes.map(({ time, note }) => `${formatTime(time)},${note}`).join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "notes.csv";
+            link.click();
+        }
+        
+        function importCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const lines = e.target.result.split("\n");
+                notes = lines.map(line => {
+                    const [timeStr, note] = line.split(",");
+                    const timeParts = timeStr.split(":").map(Number);
+                    const time = timeParts[0] * 3600 + timeParts[1] * 60 + timeParts[2];
+                    return { time, note };
+                }).sort((a, b) => a.time - b.time);
+                renderNotes();
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
