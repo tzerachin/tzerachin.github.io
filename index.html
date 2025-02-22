@@ -121,14 +121,19 @@
         let playerReady = false;
         let inputForcus = false;
         let notes = [];
-        
-        document.getElementById('note').addEventListener('focus', function () {
-          inputForcus = true
+        //すでに登録されているリスト上のinput項目にカーソルがあたってるときにも動かないようにするには
+        document.addEventListener('focusin', function(event) {
+            if (event.target.tagName === 'INPUT') {
+                inputForcus = true;
+            }
         });
-        
-        document.getElementById('note').addEventListener('blur', function () {
-          inputForcus = false
+
+        document.addEventListener('focusout', function(event) {
+            if (event.target.tagName === 'INPUT') {
+                inputForcus = false;
+            }
         });
+
         
         function onYouTubeIframeAPIReady() {
             player = new YT.Player('player', {
