@@ -160,8 +160,21 @@
         }
         
         function extractVideoId(url) {
-            const match = url.match(/[?&]v=([^&]+)/);
-            return match ? match[1] : null;
+            if (url.indexOf('youtu.be') !== -1) {
+                let editval = url.replace('https://youtu.be/', '');
+                return editval.split("?")[0] || '';
+            }else if (url.indexOf('live') !== -1) {
+                let editval = url.replace('https://www.youtube.com/live/', '');
+                editval = editval.replace('https://youtube.com/live/', '');
+                return editval.split("?")[0] || '';
+            }else if (url.indexOf('shorts') !== -1) {
+                let editval = url.replace('https://www.youtube.com/shorts/', '');
+                editval = editval.replace('https://youtube.com/shorts/', '');
+                return editval.split("?")[0] || '';
+            } else {
+                const match = url.match(/[?&]v=([^&]+)/);
+                return match ? match[1] : null;
+            }
         }
         
         function formatTime(seconds) {
